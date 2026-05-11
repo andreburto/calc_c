@@ -8,22 +8,94 @@
  * This separates the calculation logic from the GUI implementation.
  */
 
-/**
- * Calculates the sum of two double precision floating-point numbers.
- * 
- * @param a The first number to add
- * @param b The second number to add
- * @return The sum of a and b
- */
-double calculate_sum(double a, double b);
+// Operation types for the calculator
+typedef enum {
+    OP_NONE,        // No operation selected
+    OP_ADD,         // Addition
+    OP_SUBTRACT,    // Subtraction
+    OP_MULTIPLY,    // Multiplication
+    OP_DIVIDE,      // Division
+    OP_MODULUS,     // Modulus operation
+    OP_POWER        // Exponentiation
+} Operation;
+
+// Calculator state structure
+typedef struct {
+    double current_value;   // Current number being entered or result
+    double stored_value;    // Previously stored number for operation
+    Operation operation;    // Current operation pending
+    int has_decimal;        // Flag for whether we're entering decimals
+    int entering_new;       // Flag indicating if we're starting a new number entry
+    int digit_count;        // Number of digits entered (max 9, not including decimal point)
+} CalculatorState;
 
 /**
- * Parses a string and converts it to a double.
+ * Initializes the calculator state.
  * 
- * @param str The string to parse
- * @param result Pointer to store the parsed result
- * @return 1 if parsing was successful, 0 if parsing failed
+ * @param state Pointer to the calculator state structure
  */
-int parse_number(const char* str, double* result);
+void init_calculator(CalculatorState* state);
+
+/**
+ * Handles a digit button press (0-9).
+ * 
+ * @param state Pointer to the calculator state structure
+ * @param digit The digit pressed (0-9)
+ * @return 1 if digit was accepted, 0 if maximum digits reached
+ */
+int handle_digit(CalculatorState* state, int digit);
+
+/**
+ * Handles decimal point button press.
+ * 
+ * @param state Pointer to the calculator state structure
+ * @return 1 if decimal was accepted, 0 if already has decimal
+ */
+int handle_decimal(CalculatorState* state);
+
+/**
+ * Handles an operation button press (+, -, *, /, %, ^).
+ * 
+ * @param state Pointer to the calculator state structure
+ * @param op The operation to perform
+ */
+void handle_operation(CalculatorState* state, Operation op);
+
+/**
+ * Handles the equals button press.
+ * 
+ * @param state Pointer to the calculator state structure
+ * @param error_msg Buffer to store error message if division by zero occurs
+ * @param error_msg_size Size of the error message buffer
+ * @return 1 if calculation succeeded, 0 if error occurred (e.g., division by zero)
+ */
+int handle_equals(CalculatorState* state, char* error_msg, int error_msg_size);
+
+/**
+ * Handles the clear button press.
+ * 
+ * @param state Pointer to the calculator state structure
+ */
+void handle_clear(CalculatorState* state);
+
+/**
+ * Gets the current display value as a string.
+ * 
+ * @param state Pointer to the calculator state structure
+ * @param buffer Buffer to store the display string
+ * @param buffer_size Size of the buffer
+ */
+void get_display_string(const CalculatorState* state, char* buffer, int buffer_size);
+
+/**
+ * Performs the actual calculation based on the operation.
+ * 
+ * @param value1 First operand
+ * @param value2 Second operand
+ * @param op Operation to perform
+ * @param result Pointer to store the result
+ * @return 1 if calculation succeeded, 0 if error occurred (e.g., division by zero)
+ */
+int perform_calculation(double value1, double value2, Operation op, double* result);
 
 #endif // CALCULATOR_H

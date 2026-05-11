@@ -1,9 +1,9 @@
 /**
  * calc.c
  * 
- * Main GUI application for a simple calculator that adds two numbers.
+ * Main GUI application for a floating-point calculator with basic and advanced operations.
  * This program uses the Windows API (windows.h) to create a GUI with
- * two input fields and a calculate button.
+ * a button grid layout for a calculator.
  */
 
 #include <windows.h>
@@ -11,28 +11,62 @@
 #include "../include/calculator.h"
 
 // Window dimensions
-#define WINDOW_WIDTH 400
-#define WINDOW_HEIGHT 280
+#define WINDOW_WIDTH 320
+#define WINDOW_HEIGHT 435
+
+// Button dimensions
+#define BUTTON_WIDTH 70
+#define BUTTON_HEIGHT 50
+#define BUTTON_MARGIN 5
+#define BUTTON_START_X 10
+#define BUTTON_START_Y 80
 
 // Control IDs
-#define ID_TEXTBOX1 101
-#define ID_TEXTBOX2 102
-#define ID_BUTTON_CALCULATE 103
-#define ID_RESULT_LABEL 104
+#define ID_DISPLAY 100
+#define ID_BUTTON_0 101
+#define ID_BUTTON_1 102
+#define ID_BUTTON_2 103
+#define ID_BUTTON_3 104
+#define ID_BUTTON_4 105
+#define ID_BUTTON_5 106
+#define ID_BUTTON_6 107
+#define ID_BUTTON_7 108
+#define ID_BUTTON_8 109
+#define ID_BUTTON_9 110
+#define ID_BUTTON_ADD 111
+#define ID_BUTTON_SUBTRACT 112
+#define ID_BUTTON_MULTIPLY 113
+#define ID_BUTTON_DIVIDE 114
+#define ID_BUTTON_EQUALS 115
+#define ID_BUTTON_CLEAR 116
+#define ID_BUTTON_DECIMAL 117
+#define ID_BUTTON_MODULUS 118
+#define ID_BUTTON_POWER 119
 
 // Global handles for controls
-HWND hTextBox1;
-HWND hTextBox2;
-HWND hButtonCalculate;
-HWND hLabel1;
-HWND hLabel2;
-HWND hResultLabel;
+HWND hDisplay;          // Display field at the top
+HWND hButtons[20];      // Array for all buttons
 
 // Yellow background brush for the window
 HBRUSH hYellowBrush;
 
-// Font for result label
-HFONT hResultFont;
+// Font for display and buttons
+HFONT hDisplayFont;
+HFONT hButtonFont;
+
+// Calculator state
+CalculatorState calcState;
+
+/**
+ * Updates the display with the current calculator value.
+ * 
+ * @param hwnd Handle to the main window
+ */
+void update_display(HWND hwnd) {
+    char buffer[32];
+    get_display_string(&calcState, buffer, sizeof(buffer));
+    SetWindowText(hDisplay, buffer);
+}
 
 /**
  * Window procedure callback function.
@@ -47,110 +81,273 @@ HFONT hResultFont;
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_CREATE: {
+            // Initialize calculator state
+            init_calculator(&calcState);
+            
             // Create yellow background brush
             hYellowBrush = CreateSolidBrush(RGB(255, 255, 0));
             
-            // Create font for result label
-            hResultFont = CreateFont(
+            // Create font for display
+            hDisplayFont = CreateFont(
+                32, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+                DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, "Arial"
+            );
+            
+            // Create font for buttons
+            hButtonFont = CreateFont(
                 20, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
                 DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
                 DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, "Arial"
             );
             
-            // Create label for first input
-            hLabel1 = CreateWindow("STATIC", "Number 1:",
-                        WS_VISIBLE | WS_CHILD,
-                        20, 20, 120, 20,
-                        hwnd, NULL, NULL, NULL);
+            // Create display field (read-only)
+            hDisplay = CreateWindowEx(
+                WS_EX_CLIENTEDGE,
+                "EDIT", "0",
+                WS_VISIBLE | WS_CHILD | ES_RIGHT | ES_READONLY,
+                BUTTON_START_X, 20,
+                BUTTON_WIDTH * 4 + BUTTON_MARGIN * 3, 45,
+                hwnd, (HMENU)ID_DISPLAY, NULL, NULL
+            );
+            SendMessage(hDisplay, WM_SETFONT, (WPARAM)hDisplayFont, TRUE);
             
-            // Create first input textbox
-            hTextBox1 = CreateWindow("EDIT", "",
-                                    WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT,
-                                    150, 20, 200, 25,
-                                    hwnd, (HMENU)ID_TEXTBOX1, NULL, NULL);
+            // Button layout coordinates (row, col) for 5x4 grid
+            // Row 0: 7, 8, 9, +
+            // Row 1: 4, 5, 6, -
+            // Row 2: 1, 2, 3, *
+            // Row 3: 0 (double width), ., /
+            // Row 4: C, =, %, ^
             
-            // Create label for second input
-            hLabel2 = CreateWindow("STATIC", "Number 2:",
-                        WS_VISIBLE | WS_CHILD,
-                        20, 60, 120, 20,
-                        hwnd, NULL, NULL, NULL);
+            int buttonIndex = 0;
             
-            // Create second input textbox
-            hTextBox2 = CreateWindow("EDIT", "",
-                                    WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT,
-                                    150, 60, 200, 25,
-                                    hwnd, (HMENU)ID_TEXTBOX2, NULL, NULL);
+            // Row 0: 7, 8, 9, +
+            int row = 0;
+            hButtons[buttonIndex++] = CreateWindow("BUTTON", "7",
+                WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                BUTTON_START_X + 0 * (BUTTON_WIDTH + BUTTON_MARGIN),
+                BUTTON_START_Y + row * (BUTTON_HEIGHT + BUTTON_MARGIN),
+                BUTTON_WIDTH, BUTTON_HEIGHT,
+                hwnd, (HMENU)ID_BUTTON_7, NULL, NULL);
             
-            // Create calculate button
-            hButtonCalculate = CreateWindow("BUTTON", "Calculate",
-                                           WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-                                           120, 110, 150, 35,
-                                           hwnd, (HMENU)ID_BUTTON_CALCULATE, NULL, NULL);
+            hButtons[buttonIndex++] = CreateWindow("BUTTON", "8",
+                WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                BUTTON_START_X + 1 * (BUTTON_WIDTH + BUTTON_MARGIN),
+                BUTTON_START_Y + row * (BUTTON_HEIGHT + BUTTON_MARGIN),
+                BUTTON_WIDTH, BUTTON_HEIGHT,
+                hwnd, (HMENU)ID_BUTTON_8, NULL, NULL);
             
-            // Create result display field
-            hResultLabel = CreateWindow("STATIC", "",
-                                       WS_VISIBLE | WS_CHILD | SS_CENTER,
-                                       20, 160, 350, 30,
-                                       hwnd, (HMENU)ID_RESULT_LABEL, NULL, NULL);
+            hButtons[buttonIndex++] = CreateWindow("BUTTON", "9",
+                WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                BUTTON_START_X + 2 * (BUTTON_WIDTH + BUTTON_MARGIN),
+                BUTTON_START_Y + row * (BUTTON_HEIGHT + BUTTON_MARGIN),
+                BUTTON_WIDTH, BUTTON_HEIGHT,
+                hwnd, (HMENU)ID_BUTTON_9, NULL, NULL);
             
-            // Set font for result label
-            SendMessage(hResultLabel, WM_SETFONT, (WPARAM)hResultFont, TRUE);
+            hButtons[buttonIndex++] = CreateWindow("BUTTON", "+",
+                WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                BUTTON_START_X + 3 * (BUTTON_WIDTH + BUTTON_MARGIN),
+                BUTTON_START_Y + row * (BUTTON_HEIGHT + BUTTON_MARGIN),
+                BUTTON_WIDTH, BUTTON_HEIGHT,
+                hwnd, (HMENU)ID_BUTTON_ADD, NULL, NULL);
+            
+            // Row 1: 4, 5, 6, -
+            row = 1;
+            hButtons[buttonIndex++] = CreateWindow("BUTTON", "4",
+                WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                BUTTON_START_X + 0 * (BUTTON_WIDTH + BUTTON_MARGIN),
+                BUTTON_START_Y + row * (BUTTON_HEIGHT + BUTTON_MARGIN),
+                BUTTON_WIDTH, BUTTON_HEIGHT,
+                hwnd, (HMENU)ID_BUTTON_4, NULL, NULL);
+            
+            hButtons[buttonIndex++] = CreateWindow("BUTTON", "5",
+                WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                BUTTON_START_X + 1 * (BUTTON_WIDTH + BUTTON_MARGIN),
+                BUTTON_START_Y + row * (BUTTON_HEIGHT + BUTTON_MARGIN),
+                BUTTON_WIDTH, BUTTON_HEIGHT,
+                hwnd, (HMENU)ID_BUTTON_5, NULL, NULL);
+            
+            hButtons[buttonIndex++] = CreateWindow("BUTTON", "6",
+                WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                BUTTON_START_X + 2 * (BUTTON_WIDTH + BUTTON_MARGIN),
+                BUTTON_START_Y + row * (BUTTON_HEIGHT + BUTTON_MARGIN),
+                BUTTON_WIDTH, BUTTON_HEIGHT,
+                hwnd, (HMENU)ID_BUTTON_6, NULL, NULL);
+            
+            hButtons[buttonIndex++] = CreateWindow("BUTTON", "-",
+                WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                BUTTON_START_X + 3 * (BUTTON_WIDTH + BUTTON_MARGIN),
+                BUTTON_START_Y + row * (BUTTON_HEIGHT + BUTTON_MARGIN),
+                BUTTON_WIDTH, BUTTON_HEIGHT,
+                hwnd, (HMENU)ID_BUTTON_SUBTRACT, NULL, NULL);
+            
+            // Row 2: 1, 2, 3, *
+            row = 2;
+            hButtons[buttonIndex++] = CreateWindow("BUTTON", "1",
+                WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                BUTTON_START_X + 0 * (BUTTON_WIDTH + BUTTON_MARGIN),
+                BUTTON_START_Y + row * (BUTTON_HEIGHT + BUTTON_MARGIN),
+                BUTTON_WIDTH, BUTTON_HEIGHT,
+                hwnd, (HMENU)ID_BUTTON_1, NULL, NULL);
+            
+            hButtons[buttonIndex++] = CreateWindow("BUTTON", "2",
+                WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                BUTTON_START_X + 1 * (BUTTON_WIDTH + BUTTON_MARGIN),
+                BUTTON_START_Y + row * (BUTTON_HEIGHT + BUTTON_MARGIN),
+                BUTTON_WIDTH, BUTTON_HEIGHT,
+                hwnd, (HMENU)ID_BUTTON_2, NULL, NULL);
+            
+            hButtons[buttonIndex++] = CreateWindow("BUTTON", "3",
+                WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                BUTTON_START_X + 2 * (BUTTON_WIDTH + BUTTON_MARGIN),
+                BUTTON_START_Y + row * (BUTTON_HEIGHT + BUTTON_MARGIN),
+                BUTTON_WIDTH, BUTTON_HEIGHT,
+                hwnd, (HMENU)ID_BUTTON_3, NULL, NULL);
+            
+            hButtons[buttonIndex++] = CreateWindow("BUTTON", "*",
+                WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                BUTTON_START_X + 3 * (BUTTON_WIDTH + BUTTON_MARGIN),
+                BUTTON_START_Y + row * (BUTTON_HEIGHT + BUTTON_MARGIN),
+                BUTTON_WIDTH, BUTTON_HEIGHT,
+                hwnd, (HMENU)ID_BUTTON_MULTIPLY, NULL, NULL);
+            
+            // Row 3: 0 (double width), ., /
+            row = 3;
+            hButtons[buttonIndex++] = CreateWindow("BUTTON", "0",
+                WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                BUTTON_START_X + 0 * (BUTTON_WIDTH + BUTTON_MARGIN),
+                BUTTON_START_Y + row * (BUTTON_HEIGHT + BUTTON_MARGIN),
+                BUTTON_WIDTH * 2 + BUTTON_MARGIN, BUTTON_HEIGHT,
+                hwnd, (HMENU)ID_BUTTON_0, NULL, NULL);
+            
+            hButtons[buttonIndex++] = CreateWindow("BUTTON", ".",
+                WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                BUTTON_START_X + 2 * (BUTTON_WIDTH + BUTTON_MARGIN),
+                BUTTON_START_Y + row * (BUTTON_HEIGHT + BUTTON_MARGIN),
+                BUTTON_WIDTH, BUTTON_HEIGHT,
+                hwnd, (HMENU)ID_BUTTON_DECIMAL, NULL, NULL);
+            
+            hButtons[buttonIndex++] = CreateWindow("BUTTON", "/",
+                WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                BUTTON_START_X + 3 * (BUTTON_WIDTH + BUTTON_MARGIN),
+                BUTTON_START_Y + row * (BUTTON_HEIGHT + BUTTON_MARGIN),
+                BUTTON_WIDTH, BUTTON_HEIGHT,
+                hwnd, (HMENU)ID_BUTTON_DIVIDE, NULL, NULL);
+            
+            // Row 4: C, =, %, ^
+            row = 4;
+            hButtons[buttonIndex++] = CreateWindow("BUTTON", "C",
+                WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                BUTTON_START_X + 0 * (BUTTON_WIDTH + BUTTON_MARGIN),
+                BUTTON_START_Y + row * (BUTTON_HEIGHT + BUTTON_MARGIN),
+                BUTTON_WIDTH, BUTTON_HEIGHT,
+                hwnd, (HMENU)ID_BUTTON_CLEAR, NULL, NULL);
+            
+            hButtons[buttonIndex++] = CreateWindow("BUTTON", "=",
+                WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                BUTTON_START_X + 1 * (BUTTON_WIDTH + BUTTON_MARGIN),
+                BUTTON_START_Y + row * (BUTTON_HEIGHT + BUTTON_MARGIN),
+                BUTTON_WIDTH, BUTTON_HEIGHT,
+                hwnd, (HMENU)ID_BUTTON_EQUALS, NULL, NULL);
+            
+            hButtons[buttonIndex++] = CreateWindow("BUTTON", "%",
+                WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                BUTTON_START_X + 2 * (BUTTON_WIDTH + BUTTON_MARGIN),
+                BUTTON_START_Y + row * (BUTTON_HEIGHT + BUTTON_MARGIN),
+                BUTTON_WIDTH, BUTTON_HEIGHT,
+                hwnd, (HMENU)ID_BUTTON_MODULUS, NULL, NULL);
+            
+            hButtons[buttonIndex++] = CreateWindow("BUTTON", "^",
+                WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                BUTTON_START_X + 3 * (BUTTON_WIDTH + BUTTON_MARGIN),
+                BUTTON_START_Y + row * (BUTTON_HEIGHT + BUTTON_MARGIN),
+                BUTTON_WIDTH, BUTTON_HEIGHT,
+                hwnd, (HMENU)ID_BUTTON_POWER, NULL, NULL);
+            
+            // Set font for all buttons
+            for (int i = 0; i < buttonIndex; i++) {
+                SendMessage(hButtons[i], WM_SETFONT, (WPARAM)hButtonFont, TRUE);
+            }
+            
             break;
         }
         
         case WM_COMMAND: {
-            // Handle button click
-            if (LOWORD(wParam) == ID_BUTTON_CALCULATE) {
-                char buffer1[256];
-                char buffer2[256];
-                double num1, num2, result;
-                
-                // Get text from first textbox
-                GetWindowText(hTextBox1, buffer1, sizeof(buffer1));
-                
-                // Get text from second textbox
-                GetWindowText(hTextBox2, buffer2, sizeof(buffer2));
-                
-                // Parse the first number
-                if (!parse_number(buffer1, &num1)) {
-                    // Clear the answer field
-                    SetWindowText(hResultLabel, "");
-                    // Show error message box
+            int wmId = LOWORD(wParam);
+            
+            // Handle digit buttons (0-9)
+            if (wmId >= ID_BUTTON_0 && wmId <= ID_BUTTON_9) {
+                int digit = wmId - ID_BUTTON_0;
+                if (handle_digit(&calcState, digit)) {
+                    update_display(hwnd);
+                } else {
+                    // Maximum digits reached
                     MessageBox(hwnd, 
-                              "Invalid input for the first number.\nPlease enter a valid number.",
+                              "Maximum number of digits (9) reached.",
                               "Error",
-                              MB_OK | MB_ICONERROR);
-                    return 0;
+                              MB_OK | MB_ICONWARNING);
                 }
-                
-                // Parse the second number
-                if (!parse_number(buffer2, &num2)) {
-                    // Clear the answer field
-                    SetWindowText(hResultLabel, "");
-                    // Show error message box
-                    MessageBox(hwnd,
-                              "Invalid input for the second number.\nPlease enter a valid number.",
+            }
+            // Handle operation buttons
+            else if (wmId == ID_BUTTON_ADD) {
+                handle_operation(&calcState, OP_ADD);
+                update_display(hwnd);
+            }
+            else if (wmId == ID_BUTTON_SUBTRACT) {
+                handle_operation(&calcState, OP_SUBTRACT);
+                update_display(hwnd);
+            }
+            else if (wmId == ID_BUTTON_MULTIPLY) {
+                handle_operation(&calcState, OP_MULTIPLY);
+                update_display(hwnd);
+            }
+            else if (wmId == ID_BUTTON_DIVIDE) {
+                handle_operation(&calcState, OP_DIVIDE);
+                update_display(hwnd);
+            }
+            else if (wmId == ID_BUTTON_MODULUS) {
+                handle_operation(&calcState, OP_MODULUS);
+                update_display(hwnd);
+            }
+            else if (wmId == ID_BUTTON_POWER) {
+                handle_operation(&calcState, OP_POWER);
+                update_display(hwnd);
+            }
+            // Handle decimal button
+            else if (wmId == ID_BUTTON_DECIMAL) {
+                if (handle_decimal(&calcState)) {
+                    update_display(hwnd);
+                } else {
+                    // Already has decimal point
+                    MessageBox(hwnd, 
+                              "Number already has a decimal point.",
                               "Error",
-                              MB_OK | MB_ICONERROR);
-                    return 0;
+                              MB_OK | MB_ICONWARNING);
                 }
-                
-                // Calculate the sum using the calculator logic
-                result = calculate_sum(num1, num2);
-                
-                // Format and display the result in the result field
-                char resultMessage[512];
-                sprintf(resultMessage, "%.2f + %.2f = %.2f", num1, num2, result);
-                SetWindowText(hResultLabel, resultMessage);
-}
+            }
+            // Handle equals button
+            else if (wmId == ID_BUTTON_EQUALS) {
+                char error_msg[256];
+                if (!handle_equals(&calcState, error_msg, sizeof(error_msg))) {
+                    // Error occurred (e.g., division by zero)
+                    MessageBox(hwnd, error_msg, "Error", MB_OK | MB_ICONERROR);
+                }
+                update_display(hwnd);
+            }
+            // Handle clear button
+            else if (wmId == ID_BUTTON_CLEAR) {
+                handle_clear(&calcState);
+                update_display(hwnd);
+            }
+            
             break;
         }
         
-        case WM_CTLCOLORSTATIC: {
-            // Set yellow background and black text for labels
-            HDC hdcStatic = (HDC)wParam;
-            SetTextColor(hdcStatic, RGB(0, 0, 0));  // Black text
-            SetBkColor(hdcStatic, RGB(255, 255, 0));  // Yellow background
+        case WM_CTLCOLOREDIT: {
+            // Set yellow background and black text for the display
+            HDC hdcEdit = (HDC)wParam;
+            SetTextColor(hdcEdit, RGB(0, 0, 0));    // Black text
+            SetBkColor(hdcEdit, RGB(255, 255, 0));  // Yellow background
             return (LRESULT)hYellowBrush;
         }
         
@@ -159,9 +356,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             if (hYellowBrush) {
                 DeleteObject(hYellowBrush);
             }
-            // Clean up the font
-            if (hResultFont) {
-                DeleteObject(hResultFont);
+            // Clean up the fonts
+            if (hDisplayFont) {
+                DeleteObject(hDisplayFont);
+            }
+            if (hButtonFont) {
+                DeleteObject(hButtonFont);
             }
             // Post quit message when window is closed
             PostQuitMessage(0);
@@ -187,6 +387,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
  */
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                    LPSTR lpCmdLine, int nCmdShow) {
+
+    AllocConsole(); // Allocate a console for debugging output
+    freopen("CONOUT$", "w", stdout); // Redirect stdout to the console
+    freopen("CONOUT$", "w", stderr); // Redirect stderr to the console                    
+
     const char CLASS_NAME[] = "CalculatorWindowClass";
     
     // Register the window class
@@ -207,7 +412,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     HWND hwnd = CreateWindowEx(
         0,                              // Extended window style
         CLASS_NAME,                     // Window class name
-        "Simple Calculator",            // Window title
+        "Calculator",                   // Window title
         WS_OVERLAPPEDWINDOW ^ WS_THICKFRAME ^ WS_MAXIMIZEBOX, // Window style (fixed size)
         CW_USEDEFAULT, CW_USEDEFAULT,  // Position
         WINDOW_WIDTH, WINDOW_HEIGHT,    // Size

@@ -1,0 +1,35 @@
+# Compiled executable
+*.exe
+
+# Object files
+*.o
+*.obj
+obj/
+
+# Build directories
+build/
+dist/
+
+# Debug files
+*.pdb
+*.ilk
+
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# Windows specific
+Thumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Editor backup files
+*.bak
+*.swp
+*.swo
