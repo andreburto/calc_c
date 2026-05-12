@@ -6,6 +6,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include "../include/calculator.h"
@@ -33,7 +34,6 @@ void init_calculator(CalculatorState* state) {
  * @return 1 if digit was accepted, 0 if maximum digits reached
  */
 int handle_digit(CalculatorState* state, int digit) {
-    printf("Handling digit: %d. Current value: %f, digit count: %d\n", digit, state->current_value, state->digit_count);
     // Check if we're at the maximum digit limit (9 digits, not including decimal)
     if (state->digit_count >= 9) {
         return 0; // Cannot add more digits
@@ -49,45 +49,23 @@ int handle_digit(CalculatorState* state, int digit) {
     
     // Append the digit to the current value
     if (state->has_decimal) {
-        printf("Adding digit %d to decimal part\n", digit);
-        // If we have a decimal point, we need to calculate the decimal position
-        // Count how many digits after decimal we already have
-        char buffer[32];
-        // use %g here.
-        snprintf(buffer, sizeof(buffer), "%.10f", state->current_value);
-        printf("Current value as string: %s\n", buffer);
-        
-        // Find decimal point and count digits after it
-        // This is dumb. Use stdlib.h functions to parse the number instead of string manipulation.
-        char* decimal_pos = strchr(buffer, '.');
-        printf("Decimal position in string: %s\n", decimal_pos);
-        int decimal_places = 0;
-        if (decimal_pos) {
-            // Count non-zero trailing digits
-            decimal_pos++;
-            while (*decimal_pos) {
-                printf("in loop: Decimal position in string: %s\n", decimal_pos);
-                if (*decimal_pos >= '0' && *decimal_pos <= '9') {
-                    decimal_places++;
-                }
-                decimal_pos++;
-            }
+        char buffer[32];        
+        snprintf(buffer, sizeof(buffer), "%g", state->current_value);
+
+        if (!strchr(buffer, '.')) {
+            // If there's no decimal point in the string, add one
+            strncat(buffer, ".", sizeof(buffer) - strlen(buffer) - 1);
         }
-        printf("Decimal places counted: %d\n", decimal_places);
-        
-        // Add the digit at the appropriate decimal position
-        double multiplier = pow(10.0, -(decimal_places + 1));
-        printf("Decimal places: %d, multiplier for new digit: %f\n", decimal_places, multiplier);
-        printf("Current value before adding decimal digit: %f\n", state->current_value);
-        state->current_value += (double)digit * multiplier;
-        printf("Current value after adding decimal digit: %f\n", state->current_value);
+
+        // Append the new digit to the string
+        strncat(buffer, (char[]){(char)('0' + digit), '\0'}, sizeof(buffer) - strlen(buffer) - 1);
+        state->current_value = strtod(buffer, NULL);
+        (void)malloc(strlen(buffer) + 1); // Prevent optimization of buffer
     } else {
         // For integer part, multiply by 10 and add digit
         state->current_value = state->current_value * 10.0 + digit;
     }
     state->digit_count++;
-
-    printf("New current value: %f\n", state->current_value);
     
     return 1; // Digit accepted
 }
@@ -99,7 +77,6 @@ int handle_digit(CalculatorState* state, int digit) {
  * @return 1 if decimal was accepted, 0 if already has decimal
  */
 int handle_decimal(CalculatorState* state) {
-    printf("Handling decimal point. Current value: %f, has_decimal: %d\n", state->current_value, state->has_decimal);
     // If already has decimal point, don't add another
     if (state->has_decimal) {
         return 0;
@@ -240,22 +217,18 @@ void get_display_string(const CalculatorState* state, char* buffer, int buffer_s
 int perform_calculation(double value1, double value2, Operation op, double* result) {
     switch (op) {
         case OP_ADD:
-            printf("Performing addition: %f + %f\n", value1, value2);
             *result = value1 + value2;
             break;
             
         case OP_SUBTRACT:
-            printf("Performing subtraction: %f - %f\n", value1, value2);
             *result = value1 - value2;
             break;
             
         case OP_MULTIPLY:
-            printf("Performing multiplication: %f * %f\n", value1, value2);
             *result = value1 * value2;
             break;
             
         case OP_DIVIDE:
-            printf("Performing division: %f / %f\n", value1, value2);
             // Check for division by zero
             if (value2 == 0.0) {
                 return 0; // Error: division by zero
@@ -264,7 +237,6 @@ int perform_calculation(double value1, double value2, Operation op, double* resu
             break;
             
         case OP_MODULUS:
-            printf("Performing modulus: %f %% %f\n", value1, value2);
             // Check for modulus by zero
             if (value2 == 0.0) {
                 return 0; // Error: modulus by zero
@@ -273,7 +245,6 @@ int perform_calculation(double value1, double value2, Operation op, double* resu
             break;
             
         case OP_POWER:
-            printf("Performing exponentiation: %f ^ %f\n", value1, value2);
             *result = pow(value1, value2);
             break;
             

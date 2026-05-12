@@ -388,9 +388,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                    LPSTR lpCmdLine, int nCmdShow) {
 
-    AllocConsole(); // Allocate a console for debugging output
-    freopen("CONOUT$", "w", stdout); // Redirect stdout to the console
-    freopen("CONOUT$", "w", stderr); // Redirect stderr to the console                    
+    // AllocConsole(); // Allocate a console for debugging output
+    // freopen("CONOUT$", "w", stdout); // Redirect stdout to the console
+    // freopen("CONOUT$", "w", stderr); // Redirect stderr to the console                    
 
     const char CLASS_NAME[] = "CalculatorWindowClass";
     
