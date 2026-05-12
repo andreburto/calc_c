@@ -53,10 +53,12 @@ int handle_digit(CalculatorState* state, int digit) {
         // If we have a decimal point, we need to calculate the decimal position
         // Count how many digits after decimal we already have
         char buffer[32];
+        // use %g here.
         snprintf(buffer, sizeof(buffer), "%.10f", state->current_value);
         printf("Current value as string: %s\n", buffer);
         
         // Find decimal point and count digits after it
+        // This is dumb. Use stdlib.h functions to parse the number instead of string manipulation.
         char* decimal_pos = strchr(buffer, '.');
         printf("Decimal position in string: %s\n", decimal_pos);
         int decimal_places = 0;
