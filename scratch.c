@@ -36,5 +36,13 @@ int main() {
 
     printf("Value after appending digit '%c': %s\n", new_digit, buffer);
 
+    char* clr_buffer = buffer;
+    while (*clr_buffer) {
+        *clr_buffer = '\0';
+        clr_buffer++;
+    }
+
+    printf("Buffer after clearing: '%s'\n", buffer);
+
     return 0;
 }
