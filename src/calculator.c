@@ -60,7 +60,6 @@ int handle_digit(CalculatorState* state, int digit) {
         // Append the new digit to the string
         strncat(buffer, (char[]){(char)('0' + digit), '\0'}, sizeof(buffer) - strlen(buffer) - 1);
         state->current_value = strtod(buffer, NULL);
-        (void)malloc(strlen(buffer) + 1); // Prevent optimization of buffer
     } else {
         // For integer part, multiply by 10 and add digit
         state->current_value = state->current_value * 10.0 + digit;
@@ -166,6 +165,23 @@ int handle_equals(CalculatorState* state, char* error_msg, int error_msg_size) {
  */
 void handle_clear(CalculatorState* state) {
     init_calculator(state);
+}
+
+/**
+ * Handles tip calculation buttons (10% or 20%).
+ * Multiplies the current value by the tip multiplier.
+ * 
+ * @param state Pointer to the calculator state structure
+ * @param multiplier The multiplier to apply (e.g., 1.1 for 10%, 1.2 for 20%)
+ */
+void handle_tip(CalculatorState* state, double multiplier) {
+    // Multiply the current value by the tip multiplier
+    state->current_value *= multiplier;
+    
+    // Mark that we're ready to enter a new number
+    state->entering_new = 1;
+    state->digit_count = 0;
+    state->has_decimal = 0;
 }
 
 /**

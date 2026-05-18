@@ -30,6 +30,10 @@ The layout should look like this:
 +---+---+---+---+
 | C | = | % | ^ | 
 +---+---+---+---+
+|TIP 10%|TIP 20%|
++-------+-------+
+| [text]| TIP % |
++---------------+ 
 ```
 
 ## Workflow
@@ -42,4 +46,6 @@ The layout should look like this:
 - The program should handle division by zero and other invalid operations gracefully, displaying an appropriate error message in a message box.
 - The maximum number of digits that can be input should be limited to 9 to prevent overflow issues, not including the decimal point.
 - Pressing the "." button should allow the user to input a decimal point for floating-point numbers, but only one decimal point should be allowed per number.
+- The "TIP 10%" multiplies the current value by 1.1, and the "TIP 20%" button will multiply the current value by 1.2, allowing the user to quickly calculate tips for a bill.
+- The [text] field allows the user to input a custom tip percentage. When the user clicks the "TIP %" button, it will read the value from the [text] field, convert it to a multiplier (e.g., 15% becomes 1.15), and apply it to the current value. Ony accest 1 to 99 for the custom tip percentage.
 - Numbers show up in a read-only input field, and the user can only interact with the buttons to input numbers and operations. That field is in the top row of the layout.

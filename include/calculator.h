@@ -79,6 +79,15 @@ int handle_equals(CalculatorState* state, char* error_msg, int error_msg_size);
 void handle_clear(CalculatorState* state);
 
 /**
+ * Handles tip calculation buttons (10% or 20%).
+ * Multiplies the current value by the tip multiplier.
+ * 
+ * @param state Pointer to the calculator state structure
+ * @param multiplier The multiplier to apply (e.g., 1.1 for 10%, 1.2 for 20%)
+ */
+void handle_tip(CalculatorState* state, double multiplier);
+
+/**
  * Gets the current display value as a string.
  * 
  * @param state Pointer to the calculator state structure

@@ -12,7 +12,7 @@
 
 // Window dimensions
 #define WINDOW_WIDTH 320
-#define WINDOW_HEIGHT 435
+#define WINDOW_HEIGHT 545
 
 // Button dimensions
 #define BUTTON_WIDTH 70
@@ -42,10 +42,15 @@
 #define ID_BUTTON_DECIMAL 117
 #define ID_BUTTON_MODULUS 118
 #define ID_BUTTON_POWER 119
+#define ID_BUTTON_TIP10 120
+#define ID_BUTTON_TIP20 121
+#define ID_TIP_INPUT 122
+#define ID_BUTTON_TIP_CUSTOM 123
 
 // Global handles for controls
 HWND hDisplay;          // Display field at the top
 HWND hButtons[20];      // Array for all buttons
+HWND hTipInput;         // Text input for custom tip percentage
 
 // Yellow background brush for the window
 HBRUSH hYellowBrush;
@@ -264,6 +269,42 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 BUTTON_WIDTH, BUTTON_HEIGHT,
                 hwnd, (HMENU)ID_BUTTON_POWER, NULL, NULL);
             
+            // Row 5: TIP 10%, TIP 20% (spanning full width)
+            row = 5;
+            hButtons[buttonIndex++] = CreateWindow("BUTTON", "TIP 10%",
+                WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                BUTTON_START_X + 0 * (BUTTON_WIDTH + BUTTON_MARGIN),
+                BUTTON_START_Y + row * (BUTTON_HEIGHT + BUTTON_MARGIN),
+                BUTTON_WIDTH * 2 + BUTTON_MARGIN, BUTTON_HEIGHT,
+                hwnd, (HMENU)ID_BUTTON_TIP10, NULL, NULL);
+            
+            hButtons[buttonIndex++] = CreateWindow("BUTTON", "TIP 20%",
+                WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                BUTTON_START_X + 2 * (BUTTON_WIDTH + BUTTON_MARGIN),
+                BUTTON_START_Y + row * (BUTTON_HEIGHT + BUTTON_MARGIN),
+                BUTTON_WIDTH * 2 + BUTTON_MARGIN, BUTTON_HEIGHT,
+                hwnd, (HMENU)ID_BUTTON_TIP20, NULL, NULL);
+            
+            // Row 6: Custom tip input and button
+            row = 6;
+            hTipInput = CreateWindowEx(
+                0,
+                "EDIT", "",
+                WS_VISIBLE | WS_CHILD | ES_CENTER | ES_NUMBER | WS_BORDER,
+                BUTTON_START_X + 0 * (BUTTON_WIDTH + BUTTON_MARGIN),
+                BUTTON_START_Y + row * (BUTTON_HEIGHT + BUTTON_MARGIN),
+                BUTTON_WIDTH * 2 + BUTTON_MARGIN, BUTTON_HEIGHT,
+                hwnd, (HMENU)ID_TIP_INPUT, NULL, NULL
+            );
+            SendMessage(hTipInput, WM_SETFONT, (WPARAM)hButtonFont, TRUE);
+            
+            hButtons[buttonIndex++] = CreateWindow("BUTTON", "TIP %",
+                WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                BUTTON_START_X + 2 * (BUTTON_WIDTH + BUTTON_MARGIN),
+                BUTTON_START_Y + row * (BUTTON_HEIGHT + BUTTON_MARGIN),
+                BUTTON_WIDTH * 2 + BUTTON_MARGIN, BUTTON_HEIGHT,
+                hwnd, (HMENU)ID_BUTTON_TIP_CUSTOM, NULL, NULL);
+            
             // Set font for all buttons
             for (int i = 0; i < buttonIndex; i++) {
                 SendMessage(hButtons[i], WM_SETFONT, (WPARAM)hButtonFont, TRUE);
@@ -339,12 +380,42 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 handle_clear(&calcState);
                 update_display(hwnd);
             }
+            // Handle tip buttons
+            else if (wmId == ID_BUTTON_TIP10) {
+                handle_tip(&calcState, 1.1);  // Add 10% tip
+                update_display(hwnd);
+            }
+            else if (wmId == ID_BUTTON_TIP20) {
+                handle_tip(&calcState, 1.2);  // Add 20% tip
+                update_display(hwnd);
+            }
+            // Handle custom tip button
+            else if (wmId == ID_BUTTON_TIP_CUSTOM) {
+                char tipText[16];
+                GetWindowText(hTipInput, tipText, sizeof(tipText));
+                
+                // Convert to integer
+                int tipPercent = atoi(tipText);
+                
+                // Validate range (1-99)
+                if (tipPercent < 1 || tipPercent > 99) {
+                    MessageBox(hwnd, 
+                              "Please enter a tip percentage between 1 and 99.",
+                              "Invalid Input",
+                              MB_OK | MB_ICONWARNING);
+                } else {
+                    // Convert percentage to multiplier (e.g., 15% -> 1.15)
+                    double multiplier = 1.0 + (tipPercent / 100.0);
+                    handle_tip(&calcState, multiplier);
+                    update_display(hwnd);
+                }
+            }
             
             break;
         }
         
         case WM_CTLCOLOREDIT: {
-            // Set yellow background and black text for the display
+            // Set yellow background and black text for edit controls (display and tip input)
             HDC hdcEdit = (HDC)wParam;
             SetTextColor(hdcEdit, RGB(0, 0, 0));    // Black text
             SetBkColor(hdcEdit, RGB(255, 255, 0));  // Yellow background
